@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { UploadCloud, FileText, X, LoaderCircle, Copy, Check, AlertCircle } from 'lucide-react';
 
@@ -16,7 +16,6 @@ const OcrBot: React.FC = () => {
 
   const handleFileChange = (files: FileList | null) => {
     if (files && files[0]) {
-      // Validate file type
       const fileType = files[0].type;
       if (fileType === 'application/pdf' || fileType.startsWith('image/')) {
         setFile(files[0]);
@@ -62,18 +61,11 @@ const OcrBot: React.FC = () => {
     formData.append('file', file);
 
     try {
-      // This is a mock API call. Replace with your actual API endpoint.
-      // The API URL is read from the .env file.
       const apiUrl = import.meta.env.VITE_API_URL;
       
-      if (!apiUrl || apiUrl === "YOUR_API_URL") {
-        setError("API URL is not configured. Please set VITE_API_URL in your .env file.");
+      if (!apiUrl || apiUrl === "YOUR_API_URL" || apiUrl.startsWith("Y***")) {
+        setError("API URL is not configured. Please set the backend service URL for VITE_API_URL in your .env file.");
         setStatus('error');
-        // Simulate processing for demonstration purposes
-        console.warn("API URL not configured. Simulating API call.");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setExtractedText("این یک متن نمونه است که از فایل استخراج شده است. لطفاً API خود را برای دریافت نتایج واقعی متصل کنید.");
-        setStatus('success');
         return;
       }
       
@@ -84,14 +76,27 @@ const OcrBot: React.FC = () => {
         },
       });
 
-      setExtractedText(response.data.text);
-      setStatus('success');
+      if (response.data && typeof response.data.text === 'string') {
+        setExtractedText(response.data.text);
+        setStatus('success');
+      } else {
+        setError("Invalid response from API. Expected a JSON object with a 'text' property.");
+        setStatus('error');
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to extract text. Please try again.');
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+            setError(`API Error: ${err.response.status} ${err.response.statusText}. Check the backend service.`);
+        } else if (err.request) {
+            setError('API Error: No response received. Is the backend service running and accessible?');
+        } else {
+            setError(`API Error: ${err.message}`);
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
       setStatus('error');
-      // Set mock data on error for demonstration
-      setExtractedText("خطا در پردازش فایل. این یک متن نمونه برای نمایش است.");
     }
   };
 
@@ -106,7 +111,6 @@ const OcrBot: React.FC = () => {
   return (
     <div className="w-full max-w-2xl bg-slate-800/60 backdrop-blur-sm rounded-2xl shadow-2xl shadow-slate-950/50 border border-slate-700 overflow-hidden">
       <div className="p-6 md:p-8">
-        {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
             Telegram Bot OCR
@@ -116,7 +120,6 @@ const OcrBot: React.FC = () => {
           </p>
         </div>
 
-        {/* File Upload */}
         {!file ? (
           <label
             onDragEnter={(e) => handleDragEvents(e, true)}
@@ -136,25 +139,24 @@ const OcrBot: React.FC = () => {
           </label>
         ) : (
           <div className="w-full p-4 bg-slate-700/50 rounded-lg flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-indigo-400" />
+            <div className="flex items-center gap-3 overflow-hidden">
+              <FileText className="w-6 h-6 text-indigo-400 flex-shrink-0" />
               <span className="text-sm font-medium text-slate-200 truncate">{file.name}</span>
             </div>
-            <button onClick={clearFile} disabled={isProcessing} className="p-1 text-slate-400 hover:text-red-400 transition-colors rounded-full disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={clearFile} disabled={isProcessing} className="p-1 text-slate-400 hover:text-red-400 transition-colors rounded-full disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0">
               <X className="w-5 h-5" />
             </button>
           </div>
         )}
 
         {error && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-red-400">
-                <AlertCircle className="w-5 h-5" />
+            <div className="mt-4 flex items-start gap-2 text-sm text-red-400 bg-red-900/20 p-3 rounded-lg">
+                <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                 <p>{error}</p>
             </div>
         )}
 
-        {/* Action Button */}
-        {file && (
+        {file && status !== 'success' && (
           <div className="mt-6 text-center">
             <button
               onClick={handleExtractText}
@@ -174,8 +176,7 @@ const OcrBot: React.FC = () => {
         )}
       </div>
 
-      {/* Result Display */}
-      {(status === 'success' || (status === 'error' && extractedText)) && (
+      {status === 'success' && (
         <div className="bg-slate-900/70 p-6 md:p-8 border-t border-slate-700">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-slate-200">Extracted Text</h2>

@@ -1,0 +1,34 @@
+# This file is a "Blueprint" for Render.com.
+# It tells Render how to build and deploy your services.
+#
+# You can deploy this by creating a new "Blueprint Instance" on Render
+# and connecting it to your GitHub repository.
+#
+# For more details, see: https://render.com/docs/blueprint-spec
+
+services:
+  # 1. Frontend: A static site for the React UI
+  # This part will be automatically deployed by Render.
+  - type: staticSite
+    name: telegram-ocr-frontend
+    env: react
+    # The build command to run to generate the static files
+    buildCommand: yarn build
+    # The directory where the built static files are located
+    publishDir: dist
+    # The VITE_API_URL should be set in the Render dashboard environment
+    # variables to connect this frontend to your backend service.
+
+  # 2. Backend: A web service for your bot logic (Placeholder)
+  # You will need to create your backend code (e.g., in Node.js or Python)
+  # and then create a "Web Service" on Render for it.
+  # To keep it "always on", you may need a paid plan on Render.
+  #
+  # Example for a Node.js backend:
+  # - type: web
+  #   name: telegram-ocr-backend
+  #   env: node
+  #   startCommand: "node index.js"
+  #   envVars:
+  #     - key: TELEGRAM_BOT_TOKEN # Set this as a secret in the Render dashboard
+  #       sync: false
